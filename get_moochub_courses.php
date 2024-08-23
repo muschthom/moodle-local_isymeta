@@ -50,7 +50,7 @@ if (isset($_GET['moochub-version'])) {
         // Get requested version from Accept header with regex moochub-version=2.1 => 2.1 .
         if (preg_match('/.*moochub-version=(\d+(\.\d+)?)*/', $accept, $matches)) {
             $requestedversion = $matches[1];
-        } 
+        }
         if (isset($requestedversion) and !empty($requestedversion)) {
             $requestedversion = floatval($requestedversion);
             if ($requestedversion < 3) {
@@ -59,7 +59,6 @@ if (isset($_GET['moochub-version'])) {
             }
         }
     }
-
 }
 
 global $CFG;
@@ -79,7 +78,8 @@ $metas['links'] = $metaslinks;
 $metas['data'] = [];
 
 // Function to process input.
-function pproc_input($idnumbers) {
+function pproc_input($idnumbers)
+{
     // Create array for input.
     if (!is_array($idnumbers) and is_string($idnumbers)) {
         $idnumbers = [$idnumbers];
@@ -88,7 +88,7 @@ function pproc_input($idnumbers) {
     $idnumbers = array_filter($idnumbers, function ($value) {
         return trim($value) !== '';
     });
-    return($idnumbers);
+    return ($idnumbers);
 }
 
 if (!isset($_GET['idn']) && !isset($_GET['id'])) {
@@ -162,7 +162,9 @@ if (!isset($metarecords) or empty($metarecords)) {
             'ru'
         ];
         $metaentry['attributes']['inLanguage'] = [$langlist[$meta->courselanguage]];
-        $metaentry['attributes']['endDate'] = date('c', $meta->starttime);
+
+        //edit: startDate
+        $metaentry['attributes']['startDate'] = date('c', $meta->starttime);
         $metaentry['attributes']['endDate'] = null;
         $metaentry['attributes']['expires'] = null;
         if (isset($meta->availableuntil) && !empty($meta->availableuntil)) {
@@ -252,18 +254,70 @@ if (!isset($metarecords) or empty($metarecords)) {
                 WHERE coursecomp.courseid = :courseid AND framework.shortname IN ('ESCO', 'GRETA', 'DigComp')";
         $competencies = $DB->get_records_sql($sql, ['courseid' => $meta->courseid]);
 
-        // Add taught competencies to metaentry.
         foreach ($competencies as $competency) {
             $teaches = [];
-            $teaches['name'] = [];
-            $teaches['name'][0] = [];
-            $teaches['name'][0]['inLanguage'] = 'de';
-            $teaches['name'][0]['name'] = $competency->shortname;
-            $teaches['description'] = $competency->description;
+
             $teaches['educationalFramework'] = $competency->frameworkname;
-            $teaches['educationalFramework_version'] = $competency->frameworkversion;
-            $teaches['targetUrl'] = $competency->idnumber;
-            $metaentry['attributes']['teaches'][] = $teaches;
+
+            // Add taught competencies to metaentry.
+            if ($teaches['educationalFramework'] == "GRETA") {
+                //echo "hello<br/>"; 
+                $teaches['name'] = [];
+                $teaches['name'][0] = [];
+                $teaches['name'][0]['inLanguage'] = 'de';
+                $teaches['name'][0]['name'] = $competency->shortname;
+                $teaches['description'] = $competency->description;
+                $teaches['educationalFramework'] = $competency->frameworkname;
+                $teaches['educationalFramework_version'] = $competency->frameworkversion;
+
+                //new: URL to GRETA
+                $teaches['url'] = "https://www.greta-die.de/webpages/kompetenzfacetten-index";
+
+                $gretaCode = $competency->idnumber;
+                //$teaches['gretaCode'] = $gretaCode; 
+                //get greta URI for specific skill, in DEMO only for relevant GRETA-id-Numbers
+                //TODO: ergänzen
+                switch ($gretaCode) {
+                    case "GRETA-1-1-2":
+                        $teaches['targetUrl'] = "https://www.greta-die.de/webpages/kompetenzfacetten-index/kompetenzfacette-methoden-medien-und-lernmaterialien";
+                        break;
+                    case "GRETA-1-3-2":
+                        $teaches['targetUrl'] = "https://www.greta-die.de/webpages/kompetenzfacetten-index/kompetenzfacette-professionelle-kommunikation";
+                        break;
+                    case "GRETA-1-4-1":
+                        $teaches['targetUrl'] = "https://www.greta-die.de/webpages/kompetenzfacetten-index/kompetenzfacette-kooperation-mit-den-auftraggebenden-arbeitgebenden";
+                        break;
+                }
+
+                //add required data with value NULL
+                $teaches['alternatename'] = NULL;
+                $teaches['shortCode'] = NULL;
+                $teaches['educationalLevel']['description'] = NULL;
+                $teaches['educationalLevel']['description'] = NULL;
+                $teaches['educationalLevel']['properties']['name']['items']['properties']['inLanguage'] = "de";
+                $teaches['educationalLevel']['properties']['name']['items']['properties']['name'] = "Mittel";
+                $teaches['educationalLevel']['properties']['alternateName'] = NULL;
+                $teaches['educationalLevel']['properties']['shortCode'] = NULL;
+                $teaches['educationalLevel']['properties']['educationalFramework'] = $competency->frameworkname;
+                $teaches['educationalLevel']['properties']['educationalFrameworkVersion'] = $competency->frameworkversion;
+                $teaches['educationalLevel']['properties']['url'] = "https://www.die-bonn.de/doks/dieresultate/2022-Greta-01.pdf";
+                $teaches['educationalLevel']['properties']['targetUrl'] = NULL;
+                $teaches['educationalLevel']['properties']['type'] = "EducationalLevel";
+
+                $metaentry['attributes']['teaches'][] = $teaches;
+
+            } else {
+                $teaches = [];
+                $teaches['name'] = [];
+                $teaches['name'][0] = [];
+                $teaches['name'][0]['inLanguage'] = 'de';
+                $teaches['name'][0]['name'] = $competency->shortname;
+                $teaches['description'] = $competency->description;
+                $teaches['educationalFramework'] = $competency->frameworkname;
+                $teaches['educationalFramework_version'] = $competency->frameworkversion;
+                $teaches['targetUrl'] = $competency->idnumber;
+                $metaentry['attributes']['teaches'][] = $teaches;
+            }
         }
 
         // Set duration by converting amount of hours to ISO 8601 duration.
