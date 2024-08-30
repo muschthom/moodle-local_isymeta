@@ -162,7 +162,7 @@ if (!isset($metarecords) or empty($metarecords)) {
             'ru'
         ];
         $metaentry['attributes']['inLanguage'] = [$langlist[$meta->courselanguage]];
-        $metaentry['attributes']['endDate'] = date('c', $meta->starttime);
+        $metaentry['attributes']['startDate'] = date('c', $meta->starttime);
         $metaentry['attributes']['endDate'] = null;
         $metaentry['attributes']['expires'] = null;
         if (isset($meta->availableuntil) && !empty($meta->availableuntil)) {
